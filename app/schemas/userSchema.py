@@ -43,3 +43,14 @@ class TokenResponse(BaseModel):
     access_token: str
     token_type: str
     user_id: str
+    
+class GoogleAuthRequest(BaseModel):
+    token: str
+    
+class RecoverEmailRequest(BaseModel):
+    email: EmailStr
+
+class ResetPasswordRequest(BaseModel):
+    email: EmailStr
+    pin: str
+    new_password: str

@@ -1,10 +1,14 @@
+from sqlalchemy import select
 from sqlalchemy.orm import Session
+from sqlalchemy.sql.expression import func
 from app.models import User, Accommodation
 from app.schemas.userSchema import UserCreate, UserUpdate
 from app.schemas.accommodationSchema import AccommodationCreate
 from app.security import get_password_hash, verify_password
 from app.models.swipe import Swipe
 from app.models.user import User
+from app.models.message import Message
+from app.schemas.messageSchema import MessageCreate
 
 
 def get_user_by_email(db: Session, email: str):
@@ -83,20 +87,12 @@ def authenticate_user(db: Session, email: str, password: str):
 
 
 
-def get_discover_users(
-    db: Session,
-    current_user_id: str,
-    limit: int = 10,
-    city: str = None,
-    rooms: int = None,
-    bathrooms: int = None,
-    tags: list = None
-    ):
-    swiped_subquery = db.query(Swipe.swiped_id).filter(Swipe.swiper_id == current_user_id).subquery()
+def get_discover_users(db: Session, current_user_id: str, limit: int = 10, city: str = None, rooms: int = None, bathrooms: int = None, tags: list = None):
+    swiped_subquery = select(Swipe.swiped_id).where(Swipe.swiper_id == current_user_id).scalar_subquery()
     
     query = db.query(User).filter(
         User.id != current_user_id,
-        User.id.notin_(swiped_subquery)
+        User.id.notin_(swiped_subquery) # Esto ya no dará aviso
     )
 
     if city or rooms or bathrooms or tags:
@@ -108,7 +104,11 @@ def get_discover_users(
             query = query.filter(Accommodation.bedrooms >= rooms)
         if bathrooms:
             query = query.filter(Accommodation.bathrooms >= bathrooms)
-    return query.limit(limit).all()
+        if tags:
+            for tag in tags:
+                query = query.filter(Accommodation.tags.like(f'%{tag}%'))
+            
+    return query.order_by(func.rand()).limit(limit).all()
 
 
 def record_swipe_and_check_match(db: Session, swiper_id: str, swiped_id: str, is_like: bool) -> bool:
@@ -139,21 +139,60 @@ def record_swipe_and_check_match(db: Session, swiper_id: str, swiped_id: str, is
 
 
 def get_user_matches(db: Session, current_user_id: str):
-    """
-    Recupera los usuarios con los que hay un match mutuo (ambos dieron is_like=True).
-    """
-    # 1. Subconsulta: IDs de las personas a las que yo les he dado Like
-    my_likes_subquery = db.query(Swipe.swiped_id).filter(
+    my_likes_subquery = select(Swipe.swiped_id).where(
         Swipe.swiper_id == current_user_id,
         Swipe.is_like == True
-    ).subquery()
+    ).scalar_subquery()
     
-    # 2. Subconsulta: IDs de las personas que me han dado Like, 
-    # y que además están en mi lista de Likes
-    mutual_match_ids = db.query(Swipe.swiper_id).filter(
+    mutual_match_ids = select(Swipe.swiper_id).where(
         Swipe.swiped_id == current_user_id,
         Swipe.is_like == True,
         Swipe.swiper_id.in_(my_likes_subquery)
-    ).subquery()
+    ).scalar_subquery()
     
     return db.query(User).filter(User.id.in_(mutual_match_ids)).all()
+
+
+def create_message(db: Session, sender_id: str, msg: MessageCreate):
+    db_msg = Message(
+        sender_id=sender_id,
+        receiver_id=msg.receiver_id,
+        text=msg.text
+    )
+    db.add(db_msg)
+    db.commit()
+    db.refresh(db_msg)
+    return db_msg
+
+def get_chat_messages(db: Session, user1_id: str, user2_id: str):
+    return db.query(Message).filter(
+        ((Message.sender_id == user1_id) & (Message.receiver_id == user2_id)) |
+        ((Message.sender_id == user2_id) & (Message.receiver_id == user1_id))
+    ).order_by(Message.timestamp.asc()).all()
+    
+
+def update_user_password(db: Session, email: str, new_password: str):
+    """Actualiza la contraseña de un usuario existente"""
+    user = get_user_by_email(db, email)
+    if user:
+        user.hashed_password = get_password_hash(new_password)
+        db.commit()
+        db.refresh(user)
+    return user
+
+def get_unread_senders(db: Session, user_id: str):
+    """Devuelve los IDs de los usuarios que nos han enviado un mensaje que no hemos leído"""
+    senders = db.query(Message.sender_id).filter(
+        Message.receiver_id == user_id,
+        Message.is_read == False
+    ).distinct().all()
+    return [s[0] for s in senders]
+
+def mark_messages_as_read(db: Session, token_user_id: str, sender_id: str):
+    """Marca como leídos todos los mensajes que nos envió 'sender_id'"""
+    db.query(Message).filter(
+        Message.receiver_id == token_user_id,
+        Message.sender_id == sender_id,
+        Message.is_read == False
+    ).update({"is_read": True})
+    db.commit()

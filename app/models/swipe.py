@@ -7,6 +7,7 @@ class Swipe(Base):
     id = Column(Integer, primary_key=True, index=True)
     swiper_id = Column(String(50), ForeignKey("users.id"), nullable=False)
     swiped_id = Column(String(50), ForeignKey("users.id"), nullable=False)
+    is_read = Column(Boolean, default=False)
     is_like = Column(Boolean, nullable=False)
 
     # Evitamos que un usuario deslice a la misma persona dos veces
