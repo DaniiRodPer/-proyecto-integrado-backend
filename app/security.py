@@ -6,21 +6,43 @@ import jwt
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-# --- CONFIGURACIÓN DEL TOKEN ---
+#CONFGURACIÓN DEL TOKEN
 SECRET_KEY = "mi_clave_super_secreta_y_larga_para_el_proyecto"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7
+
 
 def verify_password(plain_password, hashed_password):
     """Comprueba si la contraseña plana coincide con el hash de la DB"""
     return pwd_context.verify(plain_password, hashed_password)
 
+
+"""
+Función verify_password:
+    params:
+        plain_password
+        hashed_password
+        
+Compara una contraseña en texto plano con un hash almacenado para verificar si coincide
+
+    returns:
+        bool
+"""
 def get_password_hash(password):
-    """Hashea la contraseña"""
     return pwd_context.hash(password)
 
+
+"""
+Función create_access_token:
+    params:
+        data
+        
+Genera un token JWT firmado y una fecha de expiración.
+
+    returns:
+        str
+"""
 def create_access_token(data: dict):
-    """Crea el Token JWT"""
     to_encode = data.copy()
     expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
@@ -32,10 +54,21 @@ def create_access_token(data: dict):
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
+
+"""
+Función get_current_user_id:
+    params:
+        token
+        
+Decodifica y valida un token JWT recibido en la cabecera y extraye el UUID del usuario
+si el token es inválido, lanza un error 401, de lo contrario devuelve el ID del usuario.
+
+    returns:
+        str
+"""
 def get_current_user_id(token: str = Depends(oauth2_scheme)):
     """
-    Valida el token. Si es inválido, lanza un 401.
-    Si es válido, devuelve el ID del usuario.
+    Valida el token. 
     """
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,

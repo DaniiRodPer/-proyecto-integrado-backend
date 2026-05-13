@@ -1,6 +1,14 @@
 from pydantic import BaseModel
 from datetime import datetime
 
+"""
+Clase MessageCreate
+propiedades:
+    -receiver_id
+    -text
+    
+Defie el esquema para validar al enviar un mensaje
+"""
 class MessageCreate(BaseModel):
     receiver_id: str
     text: str

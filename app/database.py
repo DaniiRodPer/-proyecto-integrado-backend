@@ -9,6 +9,12 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
 
+"""
+Función get_db:
+
+Crea una nueva sesión de base de datos para cada petición y asegura su cierre una vez finalizada la operación.
+Establece la comunicación entre FastAPI y sqlalchemy.
+"""
 def get_db():
     db = SessionLocal()
     try:

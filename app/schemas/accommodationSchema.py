@@ -1,6 +1,19 @@
 from pydantic import BaseModel
 from typing import List, Optional
 
+"""
+Clase AccommodationBase
+propiedades:
+    -city
+    -description
+    -square_meters
+    -bathrooms
+    -bedrooms
+    -pics_urls
+    -tags
+    
+Define los campos básicos de un alojamiento para la validación en las peticiones
+"""
 class AccommodationBase(BaseModel):
     city: str
     description: str

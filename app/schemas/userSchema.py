@@ -3,6 +3,22 @@ from datetime import date
 from typing import List, Optional
 from .accommodationSchema import AccommodationResponse, AccommodationCreate, AccommodationUpdate
 
+"""
+Clase UserResponse
+propiedades:
+    -id
+    -name
+    -surname
+    -email
+    -birth_date
+    -profile_pic_url
+    -user_tags
+    -user_description
+    -creation_date
+    -accommodation
+    
+Clase de Pydantic para validar los datos que envia la api.
+"""
 class UserBase(BaseModel):
     id: str
     name: str

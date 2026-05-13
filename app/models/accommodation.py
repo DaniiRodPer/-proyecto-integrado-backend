@@ -2,6 +2,22 @@ from sqlalchemy import Column, Integer, String, Text, JSON, ForeignKey
 from sqlalchemy.orm import relationship
 from app.database import Base
 
+"""
+Clase Accommodation
+propiedades:
+    -id
+    -city
+    -description
+    -square_meters
+    -bathrooms
+    -bedrooms
+    -pics_urls
+    -tags
+    -owner_id
+    
+relaciones:
+    -owner
+"""
 class Accommodation(Base):
     __tablename__ = "accommodations"
 

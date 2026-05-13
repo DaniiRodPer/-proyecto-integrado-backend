@@ -2,6 +2,16 @@ from sqlalchemy import Boolean, Column, String, ForeignKey, Integer, DateTime
 from sqlalchemy.sql import func
 from app.database import Base
 
+"""
+Clase Message
+propiedades:
+    -id
+    -sender_id
+    -receiver_id
+    -text
+    -is_read
+    -timestamp
+"""
 class Message(Base):
     __tablename__ = "messages"
 

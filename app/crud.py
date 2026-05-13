@@ -11,9 +11,32 @@ from app.models.message import Message
 from app.schemas.messageSchema import MessageCreate
 
 
+"""
+Función get_user_by_email:
+    params:
+        db
+        email
+        
+Busca en la base de datos un usuario que coincida con el email proporcionado.
+
+    returns:
+        User
+"""
 def get_user_by_email(db: Session, email: str):
     return db.query(User).filter(User.email == email).first()
 
+
+"""
+Función create_user:
+    params:
+        db
+        user
+        
+Registra un nuevo usuario hasheando su contraseña y creando su alojsmiento asociado.
+
+    returns:
+        User
+"""
 def create_user(db: Session, user: UserCreate):
     user_data = user.model_dump(exclude={"accommodation", "password"})
     
@@ -32,22 +55,50 @@ def create_user(db: Session, user: UserCreate):
 
     return db_user
 
+
+"""
+Función get_users:
+    params:
+        db
+        skip
+        limit
+        
+Recupera una lista de usuarios de la base de datos con soporte para paginación con saltos y límites.
+
+    returns:
+        List[User]
+"""
 def get_users(db: Session, skip: int = 0, limit: int = 100):
-    """
-    Recupera una lista de usuarios. 
-    skip y limit sirven para la paginación (ej: cargar de 10 en 10).
-    """
     return db.query(User).offset(skip).limit(limit).all()
 
 
+"""
+Función get_user:
+    params:
+        db
+        user_id
+        
+Devuelve un usuario específico por su UUID.
+
+    returns:
+        User
+"""
 def get_user(db: Session, user_id: str):
-    """
-    Busca un único usuario por su ID.
-    También traerá su casa automáticamente si la tiene.
-    """
     return db.query(User).filter(User.id == user_id).first()
 
 
+"""
+Función update_user:
+    params:
+        db
+        user_id
+        user_update
+        
+Actualiza los campos de perfil de n usuario y los datos de su alojamiento, si el alojamiento no existía lo crea.
+
+    returns:
+        User
+"""
 def update_user(db: Session, user_id: str, user_update: UserUpdate):
     db_user = db.query(User).filter(User.id == user_id).first()
     if not db_user:
@@ -73,9 +124,19 @@ def update_user(db: Session, user_id: str, user_update: UserUpdate):
     return db_user
 
 
+"""
+Función authenticate_user:
+    params:
+        db
+        email
+        password
+        
+Valida la identidad de un usuario comprobando si el email existe y los hash de la contraseña coinciden
 
+    returns:
+        User o False
+"""
 def authenticate_user(db: Session, email: str, password: str):
-    """Comprueba si el usuario existe y la contraseña es correcta"""
     user = get_user_by_email(db, email)
     if not user:
         return False
@@ -86,13 +147,28 @@ def authenticate_user(db: Session, email: str, password: str):
     return user
 
 
+"""
+Función get_discover_users:
+    params:
+        db
+        current_user_id
+        limit
+        city
+        rooms
+        bathrooms
+        tags
+        
+Devuelve una lista aleatoria de perfiles para la sección de discover quitando al usuario actual y perfiles ya deslizados y con filtros de búsqueda opcionalmente.
 
+    returns:
+        List[User]
+"""
 def get_discover_users(db: Session, current_user_id: str, limit: int = 10, city: str = None, rooms: int = None, bathrooms: int = None, tags: list = None):
     swiped_subquery = select(Swipe.swiped_id).where(Swipe.swiper_id == current_user_id).scalar_subquery()
     
     query = db.query(User).filter(
         User.id != current_user_id,
-        User.id.notin_(swiped_subquery) # Esto ya no dará aviso
+        User.id.notin_(swiped_subquery)
     )
 
     if city or rooms or bathrooms or tags:
@@ -111,11 +187,21 @@ def get_discover_users(db: Session, current_user_id: str, limit: int = 10, city:
     return query.order_by(func.rand()).limit(limit).all()
 
 
+"""
+Función record_swipe_and_check_match:
+    params:
+        db
+        swiper_id
+        swiped_id
+        is_like
+        
+Almacena un swipe y verifica si hay match
+
+    returns:
+        bool
+"""
 def record_swipe_and_check_match(db: Session, swiper_id: str, swiped_id: str, is_like: bool) -> bool:
-    """
-    Guarda el swipe y devuelve True si hay Match mutuo.
-    """
-    # 1. Comprobamos si ya existía (por si acaso la app manda dos veces la petición)
+
     existing_swipe = db.query(Swipe).filter(Swipe.swiper_id == swiper_id, Swipe.swiped_id == swiped_id).first()
     
     if not existing_swipe:
@@ -123,7 +209,6 @@ def record_swipe_and_check_match(db: Session, swiper_id: str, swiped_id: str, is
         db.add(new_swipe)
         db.commit()
 
-    # 2. Si es un Like, comprobamos si la otra persona también nos dio Like
     mutual_match = False
     if is_like:
         reverse_swipe = db.query(Swipe).filter(
@@ -138,6 +223,17 @@ def record_swipe_and_check_match(db: Session, swiper_id: str, swiped_id: str, is
     return mutual_match
 
 
+"""
+Función get_user_matches:
+    params:
+        db
+        current_user_id
+        
+Busca en la tabla de swipes registros de swipes opuestos entre dos usuariosy y devuleve los matches del usuarios actual del parametro
+
+    returns:
+        List[User]
+"""
 def get_user_matches(db: Session, current_user_id: str):
     my_likes_subquery = select(Swipe.swiped_id).where(
         Swipe.swiper_id == current_user_id,
@@ -153,6 +249,18 @@ def get_user_matches(db: Session, current_user_id: str):
     return db.query(User).filter(User.id.in_(mutual_match_ids)).all()
 
 
+"""
+Función create_message:
+    params:
+        db
+        sender_id
+        msg (MessageCreate)
+        
+Registra un nuevo mensaje en la base de datos vinculando al emisor y receptor.
+
+    returns:
+        Message
+"""
 def create_message(db: Session, sender_id: str, msg: MessageCreate):
     db_msg = Message(
         sender_id=sender_id,
@@ -164,6 +272,19 @@ def create_message(db: Session, sender_id: str, msg: MessageCreate):
     db.refresh(db_msg)
     return db_msg
 
+
+"""
+Función get_chat_messages:
+    params:
+        db
+        user1_id
+        user2_id
+        
+Recupera el historial completo de conversación entre dos usuarios, ordenado cronológicamente.
+
+    returns:
+        List[Message]
+"""
 def get_chat_messages(db: Session, user1_id: str, user2_id: str):
     return db.query(Message).filter(
         ((Message.sender_id == user1_id) & (Message.receiver_id == user2_id)) |
@@ -172,7 +293,6 @@ def get_chat_messages(db: Session, user1_id: str, user2_id: str):
     
 
 def update_user_password(db: Session, email: str, new_password: str):
-    """Actualiza la contraseña de un usuario existente"""
     user = get_user_by_email(db, email)
     if user:
         user.hashed_password = get_password_hash(new_password)
@@ -181,15 +301,27 @@ def update_user_password(db: Session, email: str, new_password: str):
     return user
 
 def get_unread_senders(db: Session, user_id: str):
-    """Devuelve los IDs de los usuarios que nos han enviado un mensaje que no hemos leído"""
     senders = db.query(Message.sender_id).filter(
         Message.receiver_id == user_id,
         Message.is_read == False
     ).distinct().all()
     return [s[0] for s in senders]
 
+
+"""
+Función record_swipe_and_check_match:
+    params:
+        db
+        swiper_id
+        swiped_id
+        is_like
+        
+Almacena un swipe y verifica si hay match
+
+    returns:
+        bool
+"""
 def mark_messages_as_read(db: Session, token_user_id: str, sender_id: str):
-    """Marca como leídos todos los mensajes que nos envió 'sender_id'"""
     db.query(Message).filter(
         Message.receiver_id == token_user_id,
         Message.sender_id == sender_id,

@@ -2,6 +2,23 @@ from sqlalchemy import Column, String, Integer, Text, Date, JSON
 from sqlalchemy.orm import relationship
 from app.database import Base
 
+"""
+Clase User
+propiedades:
+    -id
+    -name
+    -surname
+    -email
+    -hashed_password
+    -birth_date
+    -profile_pic_url
+    -user_description
+    -user_tags
+    -creation_date
+    
+relaciones:
+    -accommodation
+"""
 class User(Base):
     __tablename__ = "users"
 
