@@ -6,8 +6,10 @@ Para levantar este servidor en local, asegúrate de cumplir con lo siguiente:
 
 ### 1. Base de Datos (MariaDB / MySQL)
 - Tener instalado **MariaDB** o MySQL.
-- Crear una base de datos vacía llamada `proyectodrp`.
-- Configurar el acceso en el archivo `app/database.py`:
+- Crear una base de datos vacía.
+- Configurar en el fichero .env:
+  - Usuario y contraseña de la Base de Datos
+  - Usuario y contraseña del servicio de email
   
   ```python
   SQLALCHEMY_DATABASE_URL = "mysql+pymysql://USUARIO:CONTRASEÑA@localhost:3306/proyectodrp"
