@@ -10,6 +10,7 @@ venv/
 *.db
 
 static/images/*
+!static/images/dovelia_logo.png
 !static/images/.gitkeep
 
 # IDEs
