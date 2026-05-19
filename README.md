@@ -19,7 +19,7 @@ Para levantar este servidor en local, asegúrate de cumplir con lo siguiente:
   ```python
   python3 -m venv venv
 
-- Crear el entorno (Linux)
+- Crear el entorno (Windows)
   
   ```python
   python -m venv venv
