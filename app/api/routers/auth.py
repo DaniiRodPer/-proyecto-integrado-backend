@@ -14,7 +14,7 @@ from app.database import get_db
 from app.security import create_access_token
 from app.schemas.userSchema import (
     UserCreate, LoginRequest, TokenResponse, 
-    GoogleAuthRequest, RecoverEmailRequest, ResetPasswordRequest
+    GoogleAuthRequest, RecoverEmailRequest, ResetPasswordRequest, GoogleAuthResponse
 )
 from app.services.email_service import send_email_pin
 
@@ -98,7 +98,7 @@ Valida el token proporcionado por Google y si el usuario existe inicia sesión, 
     returns:
         TokenResponse
 """
-@router.post("/auth/google", response_model=TokenResponse)
+@router.post("/auth/google", response_model=GoogleAuthResponse) # <--- Usamos tu esquema completo
 def login_with_google(data: GoogleAuthRequest, db: Session = Depends(get_db)):
     try:
         GOOGLE_CLIENT_ID = "554855269813-sfhobfm3i9tbcrpav3af2pmfaq0ab92d.apps.googleusercontent.com"
@@ -113,28 +113,30 @@ def login_with_google(data: GoogleAuthRequest, db: Session = Depends(get_db)):
         user = crud.get_user_by_email(db, email=email)
         
         if not user:
-            random_pass = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(20))
-            
-            new_user_data = UserCreate(
-                id=str(uuid.uuid4()),
-                name=name,
-                surname=surname,
-                email=email,
-                password=random_pass,
-                birth_date=date.today(),
-                profile_pic_url=picture,
-                user_description="¡Hola! Uso Dovelia.",
-                user_tags=[],
-                creation_date=int(time.time())
-            )
-            user = crud.create_user(db=db, user=new_user_data)
+            return {
+                "access_token": "",
+                "token_type": "bearer", 
+                "user_id": str(uuid.uuid4()), 
+                "is_new_user": True,
+                "name": name,
+                "surname": surname,
+                "email": email,
+                "profile_pic_url": picture
+            }
         
         access_token = create_access_token(data={"sub": str(user.id)})
-        return {"access_token": access_token, "token_type": "bearer", "user_id": str(user.id)}
-        
+        return {
+            "access_token": access_token, 
+            "token_type": "bearer", 
+            "user_id": str(user.id),
+            "is_new_user": False,
+            "name": user.name,
+            "surname": user.surname,
+            "email": user.email,
+            "profile_pic_url": user.profile_pic_url if user.profile_pic_url else ""
+        }        
     except ValueError:
         raise HTTPException(status_code=401, detail="Token de Google inválido")
-
 
 
 """

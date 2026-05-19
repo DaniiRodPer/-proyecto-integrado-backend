@@ -63,6 +63,13 @@ class TokenResponse(BaseModel):
 class GoogleAuthRequest(BaseModel):
     token: str
     
+class GoogleAuthResponse(TokenResponse):
+    is_new_user: bool
+    name: str
+    surname: str
+    email: str
+    profile_pic_url: str
+    
 class RecoverEmailRequest(BaseModel):
     email: EmailStr
 
